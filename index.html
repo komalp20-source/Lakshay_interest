@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>What lights you up? · Interest Explorer</title>
+<meta name="description" content="A playful forced-choice career interest quiz with Madhubani folk-art motifs that reveals your Holland (RIASEC) code." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Mulish:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --color-background-primary:#ffffff;
+    --color-background-secondary:#f3f1ea;
+    --color-background-tertiary:#faf7f0;
+    --color-background-info:#e7f0fb;
+    --color-text-primary:#211f1b;
+    --color-text-secondary:#5f5c54;
+    --color-text-tertiary:#8a867c;
+    --color-text-info:#185fa5;
+    --color-border-tertiary:rgba(33,31,27,0.13);
+    --color-border-secondary:rgba(33,31,27,0.24);
+    --color-border-info:#378ADD;
+    --border-radius-md:8px;
+    --border-radius-lg:12px;
+    --font-sans:'Mulish',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    --font-display:'Fraunces',Georgia,serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --color-background-primary:#222019;
+      --color-background-secondary:#2c2a22;
+      --color-background-tertiary:#1a1814;
+      --color-background-info:#10283d;
+      --color-text-primary:#f2efe6;
+      --color-text-secondary:#b6b1a4;
+      --color-text-tertiary:#8a867c;
+      --color-text-info:#85b7eb;
+      --color-border-tertiary:rgba(242,239,230,0.15);
+      --color-border-secondary:rgba(242,239,230,0.28);
+      --color-border-info:#378ADD;
+    }
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:var(--font-sans);
+    color:var(--color-text-primary);
+    background-color:var(--color-background-tertiary);
+    background-image:radial-gradient(var(--color-border-tertiary) 0.7px, transparent 0.7px);
+    background-size:22px 22px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:28px 16px 56px;}
+  h1{font-family:var(--font-display);font-weight:500;}
+  h3{margin:0;font-weight:500;}
+  p{margin:0;}
+  button{
+    font-family:var(--font-sans);
+    font-size:14px;
+    font-weight:500;
+    padding:8px 14px;
+    border-radius:var(--border-radius-md);
+    border:0.5px solid var(--color-border-secondary);
+    background:transparent;
+    color:var(--color-text-primary);
+    cursor:pointer;
+    transition:background .15s ease, transform .05s ease, border-color .15s ease;
+  }
+  button:hover{background:var(--color-background-secondary);}
+  button:active{transform:scale(0.98);}
+  button:disabled{cursor:default;}
+  input[type=text]{font-family:var(--font-sans);font-size:15px;width:100%;padding:9px 12px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary);}
+  input[type=text]:focus{outline:none;border-color:var(--color-border-info);box-shadow:0 0 0 3px var(--color-background-info);}
+  input::placeholder{color:var(--color-text-tertiary);}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+  .masthead{text-align:center;margin:8px 0 22px;}
+  .masthead .kicker{font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--color-text-tertiary);}
+  footer{text-align:center;margin-top:28px;font-size:13px;color:var(--color-text-tertiary);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h2 class="sr-only">A forced-choice career interest quiz with Madhubani folk-art motifs; pick between two activities across 15 matchups to produce a Holland code.</h2>
+  <div class="masthead">
+    <p class="kicker">Interest Explorer</p>
+  </div>
+  <div id="app">
+    <div id="intro"></div>
+    <div id="quiz" style="display:none;"></div>
+    <div id="results" style="display:none;"></div>
+  </div>
+  <footer>Discover your Holland (RIASEC) interest code · illustrated with Madhubani motifs</footer>
+</div>
+
+<script>
+(function(){
+  // ====== CONFIG ======
+  // Paste your Google Apps Script web-app URL between the quotes (it ends in /exec).
+  // Leave it empty to run without saving (e.g. while testing locally).
+  const SHEET_ENDPOINT='';
+  // =====================
+  const COLS=['#639922','#378ADD','#D4537E','#1D9E75','#BA7517','#7F77DD'];
+  const IC={
+    right:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>',
+    left:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" aria-hidden="true"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg>',
+    refresh:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>'
+  };
+  const M={
+    R:'<svg viewBox="0 0 100 100" width="72" height="72" aria-hidden="true"><g fill="none" stroke="#639922" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><ellipse cx="54" cy="52" rx="30" ry="21"/><ellipse cx="54" cy="52" rx="24" ry="15"/><ellipse cx="26" cy="50" rx="13" ry="15"/><ellipse cx="24" cy="44" rx="7" ry="10"/><path d="M16 56 q-7 14 -1 24 q3 5 9 2"/><line x1="38" y1="71" x2="38" y2="84"/><line x1="50" y1="72" x2="50" y2="85"/><line x1="64" y1="72" x2="64" y2="85"/><line x1="76" y1="69" x2="76" y2="82"/><path d="M84 48 q8 -2 8 8"/></g><circle cx="22" cy="44" r="2.2" fill="#639922"/><g fill="#639922"><circle cx="50" cy="46" r="1.4"/><circle cx="60" cy="50" r="1.4"/><circle cx="44" cy="54" r="1.4"/><circle cx="66" cy="44" r="1.4"/><circle cx="56" cy="58" r="1.4"/></g></svg>',
+    I:'<svg viewBox="0 0 100 100" width="72" height="72" aria-hidden="true"><g fill="none" stroke="#378ADD" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M16 50 Q50 20 82 50 Q50 80 16 50 Z"/><path d="M82 50 L96 38 L91 50 L96 62 Z"/><path d="M40 26 Q44 34 40 40"/><path d="M40 74 Q44 66 40 60"/><path d="M34 34 Q40 50 34 66"/><circle cx="30" cy="46" r="4.5"/><path d="M48 38 Q56 50 48 62"/><path d="M58 40 Q66 50 58 60"/><path d="M68 42 Q74 50 68 58"/></g><circle cx="30" cy="46" r="2" fill="#378ADD"/><g fill="#378ADD"><circle cx="44" cy="50" r="1.3"/><circle cx="54" cy="50" r="1.3"/><circle cx="64" cy="50" r="1.3"/></g></svg>',
+    A:'<svg viewBox="0 0 100 100" width="72" height="72" aria-hidden="true"><g fill="none" stroke="#D4537E" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><ellipse cx="34" cy="62" rx="11" ry="15"/><path d="M34 48 Q34 30 48 24"/><circle cx="51" cy="22" r="5"/><path d="M55 21 l7 -2"/><path d="M51 16 l0 -6 M48 17 l-2 -6 M54 17 l2 -6"/><path d="M40 58 Q66 34 80 30"/><path d="M42 62 Q72 50 86 50"/><path d="M42 66 Q70 66 84 70"/><path d="M40 70 Q64 80 76 88"/><line x1="30" y1="76" x2="30" y2="88"/><line x1="38" y1="76" x2="38" y2="88"/></g><g fill="none" stroke="#D4537E" stroke-width="2"><circle cx="82" cy="29" r="3.5"/><circle cx="88" cy="50" r="3.5"/><circle cx="86" cy="71" r="3.5"/><circle cx="78" cy="89" r="3.5"/></g><g fill="#D4537E"><circle cx="82" cy="29" r="1.4"/><circle cx="88" cy="50" r="1.4"/><circle cx="86" cy="71" r="1.4"/><circle cx="78" cy="89" r="1.4"/><circle cx="50" cy="22" r="1.6"/></g></svg>',
+    S:'<svg viewBox="0 0 100 100" width="72" height="72" aria-hidden="true"><g fill="none" stroke="#1D9E75" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><ellipse cx="32" cy="56" rx="11" ry="8"/><circle cx="43" cy="49" r="4.5"/><path d="M47 48 l5 -1"/><path d="M24 50 l-8 -4 M24 56 l-9 0 M24 62 l-8 4"/><path d="M30 50 q4 6 0 12"/><ellipse cx="68" cy="56" rx="11" ry="8"/><circle cx="57" cy="49" r="4.5"/><path d="M53 48 l-5 -1"/><path d="M76 50 l8 -4 M76 56 l9 0 M76 62 l8 4"/><path d="M70 50 q-4 6 0 12"/><path d="M50 74 l0 -9 M50 69 l-4 -3 M50 69 l4 -3"/></g><g fill="#1D9E75"><circle cx="44" cy="48" r="1.5"/><circle cx="56" cy="48" r="1.5"/><circle cx="50" cy="62" r="1.5"/></g></svg>',
+    E:'<svg viewBox="0 0 100 100" width="72" height="72" aria-hidden="true"><g fill="none" stroke="#BA7517" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><circle cx="50" cy="50" r="18"/><circle cx="50" cy="50" r="12"/><path d="M44 52 q6 6 12 0"/><path d="M50 32 l0 -14"/><path d="M50 68 l0 14"/><path d="M32 50 l-14 0"/><path d="M68 50 l14 0"/><path d="M37 37 l-9 -9"/><path d="M63 37 l9 -9"/><path d="M37 63 l-9 9"/><path d="M63 63 l9 9"/><path d="M44 33 l-4 -13"/><path d="M56 33 l4 -13"/><path d="M44 67 l-4 13"/><path d="M56 67 l4 13"/></g><g fill="#BA7517"><circle cx="44" cy="46" r="1.8"/><circle cx="56" cy="46" r="1.8"/><circle cx="50" cy="18" r="1.5"/><circle cx="82" cy="50" r="1.5"/><circle cx="50" cy="82" r="1.5"/><circle cx="18" cy="50" r="1.5"/></g></svg>',
+    C:'<svg viewBox="0 0 100 100" width="72" height="72" aria-hidden="true"><g fill="none" stroke="#7F77DD" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><circle cx="50" cy="50" r="7"/><path d="M50 43 Q56 32 50 22 Q44 32 50 43Z"/><path d="M50 57 Q56 68 50 78 Q44 68 50 57Z"/><path d="M43 50 Q32 56 22 50 Q32 44 43 50Z"/><path d="M57 50 Q68 56 78 50 Q68 44 57 50Z"/><path d="M45 45 Q34 34 30 30 Q40 38 45 45Z"/><path d="M55 45 Q66 34 70 30 Q60 38 55 45Z"/><path d="M45 55 Q34 66 30 70 Q40 62 45 55Z"/><path d="M55 55 Q66 66 70 70 Q60 62 55 55Z"/><circle cx="50" cy="50" r="34"/></g><g fill="#7F77DD"><circle cx="50" cy="50" r="2.2"/><circle cx="50" cy="14" r="1.4"/><circle cx="86" cy="50" r="1.4"/><circle cx="50" cy="86" r="1.4"/><circle cx="14" cy="50" r="1.4"/><circle cx="24" cy="24" r="1.2"/><circle cx="76" cy="24" r="1.2"/><circle cx="76" cy="76" r="1.2"/><circle cx="24" cy="76" r="1.2"/></g></svg>'
+  };
+  const T={
+    R:{name:'Realistic',tag:'The Doer',color:'#639922',blurb:'Hands-on and practical. Likes building, fixing, and working with tools, machines, the body, or the outdoors.'},
+    I:{name:'Investigative',tag:'The Thinker',color:'#378ADD',blurb:'Curious and analytical. Enjoys research, science, data, and solving hard problems.'},
+    A:{name:'Artistic',tag:'The Creator',color:'#D4537E',blurb:'Imaginative and expressive. Values originality and dislikes rigid routine.'},
+    S:{name:'Social',tag:'The Helper',color:'#1D9E75',blurb:'Caring and people-focused. Enjoys teaching, helping, and supporting others.'},
+    E:{name:'Enterprising',tag:'The Persuader',color:'#BA7517',blurb:'Ambitious and persuasive. Likes leading, selling, and driving outcomes.'},
+    C:{name:'Conventional',tag:'The Organiser',color:'#7F77DD',blurb:'Organised and detail-oriented. Enjoys structure, data, and clear procedures.'}
+  };
+  const ORDER=['R','I','A','S','E','C'];
+  const PAIRS=[
+    {a:{t:'R',text:'Build or fix something with your hands'}, b:{t:'I',text:'Solve a tricky puzzle or brain-teaser'}},
+    {a:{t:'R',text:'Work outdoors with plants or animals'}, b:{t:'A',text:'Draw, paint, or design something'}},
+    {a:{t:'R',text:'Play sport or do something physical'}, b:{t:'S',text:'Help a classmate who is struggling'}},
+    {a:{t:'R',text:'Take a gadget apart to see how it works'}, b:{t:'E',text:'Lead a group or run a project'}},
+    {a:{t:'R',text:'Operate a machine or drive a vehicle'}, b:{t:'C',text:'Organise files, lists, and schedules'}},
+    {a:{t:'I',text:'Do a science experiment'}, b:{t:'A',text:'Write a story, song, or poem'}},
+    {a:{t:'I',text:'Research a topic until you really get it'}, b:{t:'S',text:'Teach or explain something to others'}},
+    {a:{t:'I',text:'Work with numbers and data'}, b:{t:'E',text:'Convince people to back your idea'}},
+    {a:{t:'I',text:'Figure out why things work the way they do'}, b:{t:'C',text:'Follow clear step-by-step instructions'}},
+    {a:{t:'A',text:'Act, perform, or make a video'}, b:{t:'S',text:'Volunteer or care for people in need'}},
+    {a:{t:'A',text:'Decorate a space or style a look'}, b:{t:'E',text:'Sell something or start a small business'}},
+    {a:{t:'A',text:'Come up with brand-new, original ideas'}, b:{t:'C',text:'Keep records neat and accurate'}},
+    {a:{t:'S',text:'Listen to someone and give advice'}, b:{t:'E',text:'Speak or present in front of a crowd'}},
+    {a:{t:'S',text:'Work in a team to support others'}, b:{t:'C',text:'Work with spreadsheets or budgets'}},
+    {a:{t:'E',text:'Set goals and compete to win'}, b:{t:'C',text:'Plan things out in a clear order'}}
+  ];
+  const picks=new Array(PAIRS.length).fill(null);
+  let cur=0;
+  let student={name:'',group:''};
+  const intro=document.getElementById('intro'), quiz=document.getElementById('quiz'), results=document.getElementById('results');
+
+  function medallion(code){
+    let s='<svg viewBox="0 0 200 200" style="width:168px; height:168px;" aria-hidden="true">';
+    s+='<circle cx="100" cy="100" r="94" fill="none" style="stroke:var(--color-border-secondary)" stroke-width="1.5"/>';
+    s+='<circle cx="100" cy="100" r="86" fill="none" style="stroke:var(--color-border-secondary)" stroke-width="1"/>';
+    for(let k=0;k<12;k++){ const ang=k/12*Math.PI*2, c=COLS[k%6], r1=64, r2=82;
+      const x1=100+Math.cos(ang)*r1, y1=100+Math.sin(ang)*r1, x2=100+Math.cos(ang)*r2, y2=100+Math.sin(ang)*r2;
+      const px=Math.cos(ang+Math.PI/2), py=Math.sin(ang+Math.PI/2), w=6;
+      const mx=100+Math.cos(ang)*((r1+r2)/2), my=100+Math.sin(ang)*((r1+r2)/2);
+      s+='<path d="M'+x1.toFixed(1)+' '+y1.toFixed(1)+' Q'+(mx+px*w).toFixed(1)+' '+(my+py*w).toFixed(1)+' '+x2.toFixed(1)+' '+y2.toFixed(1)+' Q'+(mx-px*w).toFixed(1)+' '+(my-py*w).toFixed(1)+' '+x1.toFixed(1)+' '+y1.toFixed(1)+' Z" fill="none" stroke="'+c+'" stroke-width="1.8" stroke-linejoin="round"/>'; }
+    for(let k=0;k<24;k++){ const ang=(k+0.5)/24*Math.PI*2, c=COLS[k%6], rr=90; s+='<circle cx="'+(100+Math.cos(ang)*rr).toFixed(1)+'" cy="'+(100+Math.sin(ang)*rr).toFixed(1)+'" r="1.4" fill="'+c+'"/>'; }
+    s+='<circle cx="100" cy="100" r="52" style="fill:var(--color-background-primary); stroke:var(--color-border-secondary)" stroke-width="1.5"/>';
+    s+='<circle cx="100" cy="100" r="46" fill="none" style="stroke:var(--color-border-secondary)" stroke-width="0.8"/>';
+    s+='</svg>';
+    return '<div style="position:relative; display:inline-block;">'+s+'<div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;"><span style="font-family:var(--font-display); font-size:38px; font-weight:600; letter-spacing:3px; color:var(--color-text-primary);">'+code+'</span></div></div>';
+  }
+  function small(k){ return M[k].replace('width="72" height="72"','width="50" height="50"'); }
+  function escapeAttr(s){ return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function renderIntro(){
+    const motifs=ORDER.map(function(k){return '<div style="display:flex; align-items:center; justify-content:center;">'+small(k)+'</div>';}).join('');
+    intro.innerHTML=
+      '<div style="background:var(--color-background-primary); border:0.5px solid var(--color-border-secondary); border-radius:var(--border-radius-lg);">'+
+        '<div style="padding:1.75rem 1.5rem;">'+
+          '<h1 style="margin:0 0 6px; font-size:30px; text-align:center;">What lights you up?</h1>'+
+          '<p style="margin:0 auto 1.5rem; max-width:430px; color:var(--color-text-secondary); text-align:center;">Fifteen quick face-offs between two activities. Pick the one you\u2019d enjoy more \u2014 trust your gut. Your six guides are waiting.</p>'+
+          '<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; max-width:320px; margin:0 auto 1.5rem;">'+motifs+'</div>'+
+          '<div style="max-width:360px; margin:0 auto 1.25rem; display:grid; gap:10px;">'+
+            '<input type="text" id="nameInput" placeholder="Your name" value="'+escapeAttr(student.name)+'" />'+
+            '<input type="text" id="groupInput" placeholder="Class or group (optional)" value="'+escapeAttr(student.group)+'" />'+
+          '</div>'+
+          '<div style="text-align:center;"><button id="startBtn" style="font-size:15px; padding:11px 22px;">Begin '+IC.right+'</button></div>'+
+        '</div>'+
+      '</div>';
+    document.getElementById('startBtn').addEventListener('click',function(){
+      student.name=(document.getElementById('nameInput').value||'').trim();
+      student.group=(document.getElementById('groupInput').value||'').trim();
+      intro.style.display='none'; quiz.style.display='block'; renderPair();
+    });
+  }
+
+  function optionCard(opt){
+    const on=picks[cur]===opt.t;
+    return '<button data-t="'+opt.t+'" aria-label="'+opt.text+'" style="width:100%; display:flex; flex-direction:column; align-items:center; gap:10px; padding:1.25rem 1rem; border-radius:var(--border-radius-lg); text-align:center; min-height:170px; justify-content:center;'+(on?' border:2px solid var(--color-border-info); background:var(--color-background-info);':'')+'">'+M[opt.t]+'<span style="font-size:15px; line-height:1.45; color:var(--color-text-primary);">'+opt.text+'</span></button>';
+  }
+  function renderPair(){
+    const p=PAIRS[cur], left=(cur%2===0)?p.a:p.b, right=(cur%2===0)?p.b:p.a, pct=Math.round(cur/PAIRS.length*100);
+    quiz.innerHTML=
+      '<div style="display:flex; align-items:center; gap:12px; margin:0 0 1.25rem;"><div style="flex:1; height:6px; background:var(--color-background-secondary); border-radius:999px; overflow:hidden;"><div style="height:100%; width:'+pct+'%; background:var(--color-text-info); border-radius:999px;"></div></div><span style="font-size:13px; color:var(--color-text-secondary); min-width:64px; text-align:right;">'+(cur+1)+' of '+PAIRS.length+'</span></div>'+
+      '<p style="text-align:center; font-size:16px; font-weight:500; margin:0 0 1rem;">Which would you rather do?</p>'+
+      '<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:stretch;">'+optionCard(left)+optionCard(right)+'</div>'+
+      '<div style="display:flex; justify-content:space-between; margin-top:1rem;"><button id="backBtn" '+(cur===0?'disabled style="opacity:0.4;"':'')+'>'+IC.left+' Back</button><button id="restartBtn" style="color:var(--color-text-secondary);">'+IC.refresh+' Restart</button></div>';
+    quiz.querySelectorAll('[data-t]').forEach(function(b){ b.addEventListener('click',function(){ picks[cur]=b.getAttribute('data-t'); b.style.borderColor='var(--color-border-info)'; setTimeout(function(){ if(cur<PAIRS.length-1){cur++;renderPair();} else {showResults();} },200); }); });
+    const back=quiz.querySelector('#backBtn'); if(back) back.addEventListener('click',function(){if(cur>0){cur--;renderPair();}});
+    quiz.querySelector('#restartBtn').addEventListener('click',resetAll);
+  }
+  function resetAll(){ for(let i=0;i<picks.length;i++)picks[i]=null; cur=0; results.style.display='none'; quiz.style.display='none'; intro.style.display='block'; }
+
+  function showResults(){
+    const matches=[], score={R:0,I:0,A:0,S:0,E:0,C:0};
+    picks.forEach(function(w,i){ if(w){ const p=PAIRS[i], lose=(w===p.a.t)?p.b.t:p.a.t; matches.push({win:w,lose:lose}); score[w]++; }});
+    function beat(a,b){ if(matches.some(function(m){return m.win===a&&m.lose===b;})) return 1; if(matches.some(function(m){return m.win===b&&m.lose===a;})) return -1; return 0; }
+    const ranked=ORDER.slice().sort(function(a,b){ if(score[b]!==score[a]) return score[b]-score[a]; const h=beat(a,b); if(h!==0) return -h; return ORDER.indexOf(a)-ORDER.indexOf(b); });
+    const code=ranked.slice(0,3), max=5, W=640, rowH=42, top=8, H=top+ORDER.length*rowH+4, trackX=150, trackW=460, scoreX=636;
+    let svg='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" role="img" style="width:100%; height:auto;"><title>Wins for each interest theme</title>';
+    ranked.forEach(function(k,i){ const y=top+i*rowH, bh=26, by=y+(rowH-bh)/2, w=Math.round(trackW*score[k]/max), isTop=code.indexOf(k)>-1;
+      svg+='<text x="4" y="'+(by+18)+'" style="fill:var(--color-text-primary); font-size:14px; font-weight:'+(isTop?500:400)+'; font-family:var(--font-sans);">'+T[k].name+'</text>';
+      svg+='<rect x="'+trackX+'" y="'+by+'" width="'+trackW+'" height="'+bh+'" rx="4" style="fill:var(--color-background-secondary);"/>';
+      svg+='<rect x="'+trackX+'" y="'+by+'" width="'+w+'" height="'+bh+'" rx="4" fill="'+T[k].color+'"/>';
+      svg+='<text x="'+scoreX+'" y="'+(by+18)+'" text-anchor="end" style="fill:var(--color-text-secondary); font-size:13px; font-family:var(--font-sans);">'+score[k]+'/'+max+'</text>'; });
+    svg+='</svg>';
+    const cards=code.map(function(k,idx){ const t=T[k];
+      return '<div style="background:var(--color-background-primary); border:'+(idx===0?'2px solid var(--color-border-info)':'0.5px solid var(--color-border-tertiary)')+'; border-radius:var(--border-radius-lg); padding:1.25rem; margin-bottom:12px;"><div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">'+M[k]+'<div><p style="margin:0; font-size:16px; font-weight:500;">'+k+' \u00b7 '+t.name+'</p><p style="margin:0; font-size:13px; color:var(--color-text-tertiary);">'+t.tag+'</p></div></div><p style="margin:0; color:var(--color-text-secondary); line-height:1.6; font-size:15px;">'+t.blurb+'</p></div>'; }).join('');
+    results.innerHTML=
+      '<div style="background:var(--color-background-primary); border:0.5px solid var(--color-border-secondary); border-radius:var(--border-radius-lg); margin-bottom:1.25rem;">'+
+        '<div style="text-align:center; padding:1.75rem 1rem;">'+
+          '<p style="margin:0 0 12px; color:var(--color-text-secondary); font-size:14px;">Your Holland code</p>'+
+          medallion(code.join(''))+
+          '<p style="margin:16px auto 0; max-width:440px; color:var(--color-text-secondary); line-height:1.6;">Your strongest interests are '+code.map(function(k){return T[k].name;}).join(', ')+'. Roles that blend these tend to suit you best.</p>'+
+        '</div>'+
+      '</div>'+
+      '<div style="margin:0 0 1.5rem;">'+svg+'</div>'+
+      '<p style="font-size:14px; color:var(--color-text-tertiary); margin:0 0 12px;">Your top three themes</p>'+cards+
+      '<div id="saveStatus" style="text-align:center; font-size:13px; color:var(--color-text-tertiary); margin:4px 0 12px; min-height:18px;"></div>'+
+      '<div style="text-align:center; margin-top:4px;"><button id="againBtn">'+IC.refresh+' Take it again</button></div>';
+    quiz.style.display='none'; results.style.display='block';
+    document.getElementById('againBtn').addEventListener('click',resetAll);
+    saveResult({ name:student.name||'Anonymous', group:student.group||'', code:code.join(''), scores:score });
+  }
+
+  function setStatus(msg,color){ var el=document.getElementById('saveStatus'); if(el){ el.textContent=msg; el.style.color=color||'var(--color-text-tertiary)'; } }
+  function saveResult(payload){
+    if(!SHEET_ENDPOINT){ return; }
+    setStatus('Saving your result\u2026');
+    fetch(SHEET_ENDPOINT,{ method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(payload) })
+      .then(function(r){ return r.json().catch(function(){ return {ok:true}; }); })
+      .then(function(res){ if(res && res.ok===false){ throw new Error(res.error||'save failed'); } setStatus('Saved to the class sheet \u2713','var(--color-text-info)'); })
+      .catch(function(){ var el=document.getElementById('saveStatus'); if(el){ el.innerHTML='Couldn\u2019t save your result. <button id="retrySave" style="font-size:12px; padding:3px 8px;">Try again</button>'; var rb=document.getElementById('retrySave'); if(rb) rb.addEventListener('click',function(){ saveResult(payload); }); } });
+  }
+
+  renderIntro();
+})();
+</script>
+</body>
+</html>
